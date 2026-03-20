@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3-Tier App · Status</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0e17;
+      --surface:  #111827;
+      --border:   #1e2d40;
+      --accent:   #00e5ff;
+      --accent2:  #7c3aed;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --yellow:   #facc15;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --mono:     'DM Mono', monospace;
+      --display:  'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+      overflow-x: hidden;
+    }
+
+    /* ── Grid lines background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page { position: relative; z-index: 1; width: 100%; max-width: 860px; }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 3rem 0 2rem;
+      animation: fadeDown .6s ease both;
+    }
+    .badge {
+      display: inline-block;
+      font-size: .65rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: .25rem .75rem;
+      border-radius: 2px;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -.02em;
+      background: linear-gradient(135deg, #fff 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      margin-top: .75rem;
+      color: var(--muted);
+      font-size: .8rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    /* ── Architecture flow ── */
+    .arch {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      animation: fadeUp .6s .15s ease both;
+    }
+    .arch-node {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: .5rem 1.1rem;
+      border-radius: 4px;
+      font-size: .72rem;
+      letter-spacing: .06em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .arch-node.active { border-color: var(--accent); color: var(--accent); }
+    .arch-arrow { color: var(--border); font-size: .85rem; }
+
+    /* ── Status grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+      animation: fadeUp .6s .25s ease both;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.4rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .25s;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity .25s;
+    }
+    .card:hover { border-color: var(--accent); }
+    .card:hover::before { opacity: 1; }
+
+    .card-label {
+      font-size: .65rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .6rem;
+    }
+    .card-value {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .card-value.mono { font-family: var(--mono); font-size: .85rem; }
+
+    /* ── Health panel ── */
+    .health-panel {
+      margin-top: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      animation: fadeUp .6s .35s ease both;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .9rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      font-family: var(--display);
+      font-size: .85rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .refresh-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: .7rem;
+      padding: .3rem .8rem;
+      border-radius: 3px;
+      cursor: pointer;
+      letter-spacing: .06em;
+      transition: all .2s;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .health-body { padding: 1.5rem; }
+    .health-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .6rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .health-row:last-child { border-bottom: none; }
+    .health-key { font-size: .78rem; color: var(--muted); letter-spacing: .05em; }
+    .health-val { font-size: .78rem; }
+
+    .dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      margin-right: .45rem;
+    }
+    .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .dot.yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 1.2s infinite; }
+
+    .status-ok       { color: var(--green); }
+    .status-error    { color: var(--red); }
+    .status-loading  { color: var(--yellow); }
+
+    /* ── Raw JSON block ── */
+    .json-block {
+      margin-top: 1rem;
+      background: #060a12;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.2rem 1.5rem;
+      font-size: .72rem;
+      color: #94a3b8;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.7;
+      animation: fadeUp .6s .45s ease both;
+    }
+    .json-key   { color: var(--accent); }
+    .json-str   { color: #86efac; }
+    .json-num   { color: #fda4af; }
+    .json-bool  { color: #c4b5fd; }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      font-size: .68rem;
+      color: var(--muted);
+      letter-spacing: .06em;
+      animation: fadeUp .6s .55s ease both;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:none; } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(12px);  } to { opacity:1; transform:none; } }
+    @keyframes pulse    { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    .spin { display:inline-block; animation: spin .8s linear infinite; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="badge">Docker · 3-Tier Architecture</div>
+      <h1>System Dashboard</h1>
+      <p class="subtitle">Nginx → Node.js → MySQL</p>
+    </header>
+
+    <!-- Architecture flow -->
+    <div class="arch">
+      <div class="arch-node">Browser</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node active">Nginx</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">Express API</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-node">MySQL 8.0</div>
+    </div>
+
+    <!-- Info cards -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-label">Served By</div>
+        <div class="card-value">Nginx (alpine)</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Backend</div>
+        <div class="card-value">Node.js + Express</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Database</div>
+        <div class="card-value">MySQL 8.0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Local Time</div>
+        <div class="card-value mono" id="clock">—</div>
+      </div>
+    </div>
+
+    <!-- Health panel -->
+    <div class="health-panel">
+      <div class="panel-header">
+        <span class="panel-title">Health Check · /api/health</span>
+        <button class="refresh-btn" onclick="fetchHealth()">↻ Refresh</button>
+      </div>
+      <div class="health-body" id="health-body">
+        <div class="health-row">
+          <span class="health-key">Status</span>
+          <span class="health-val status-loading"><span class="dot yellow"></span>Loading…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw JSON -->
+    <div class="json-block" id="json-out">Fetching /api/health …</div>
+
+    <footer>
+      Internship Assignment · Docker 3-Tier · Built with ❤ and Alpine Linux
+    </footer>
+  </div>
+
+  <script>
+    // Clock
+    function tick() {
+      document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+    }
+    tick(); setInterval(tick, 1000);
+
+    // Syntax highlight JSON
+    function highlight(obj) {
+      return JSON.stringify(obj, null, 2)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:')
+        .replace(/: "([^"]*)"/g, ': <span class="json-str">"$1"</span>')
+        .replace(/: (\d+)/g, ': <span class="json-num">$1</span>')
+        .replace(/: (true|false)/g, ': <span class="json-bool">$1</span>');
+    }
+
+    function renderHealth(data) {
+      const db       = data.database || {};
+      const isOk     = data.status === 'ok';
+      const dbOk     = db.status === 'ok';
+
+      const rows = [
+        { key: 'Overall',   val: data.status,   ok: isOk },
+        { key: 'Database',  val: db.status,      ok: dbOk },
+        { key: 'DB Message',val: db.message || '—', plain: true },
+        { key: 'Timestamp', val: data.timestamp || '—', plain: true },
+      ];
+
+      document.getElementById('health-body').innerHTML = rows.map(r => {
+        let valHtml;
+        if (r.plain) {
+          valHtml = `<span class="health-val" style="color:var(--muted)">${r.val}</span>`;
+        } else {
+          const cls  = r.ok ? 'green' : 'red';
+          const scls = r.ok ? 'status-ok' : 'status-error';
+          valHtml = `<span class="health-val ${scls}"><span class="dot ${cls}"></span>${r.val}</span>`;
+        }
+        return `<div class="health-row"><span class="health-key">${r.key}</span>${valHtml}</div>`;
+      }).join('');
+
+      document.getElementById('json-out').innerHTML = highlight(data);
+    }
+
+    async function fetchHealth() {
+      const btn = document.querySelector('.refresh-btn');
+      btn.innerHTML = '<span class="spin">↻</span> Fetching';
+      btn.disabled = true;
+
+      try {
+        const res  = await fetch('/api/health');
+        const data = await res.json();
+        renderHealth(data);
+      } catch (err) {
+        document.getElementById('health-body').innerHTML =
+          `<div class="health-row"><span class="health-key">Error</span>
+           <span class="health-val status-error"><span class="dot red"></span>${err.message}</span></div>`;
+        document.getElementById('json-out').textContent = `Error: ${err.message}`;
+      } finally {
+        btn.innerHTML = '↻ Refresh';
+        btn.disabled  = false;
+      }
+    }
+
+    fetchHealth();
+    setInterval(fetchHealth, 30000);
+  </script>
+</body>
+</html>
