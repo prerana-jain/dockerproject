@@ -98,11 +98,9 @@ services:
     healthcheck:
       test:
         - CMD
-        - wget
-        - --quiet
-        - --tries=1
-        - --spider
-        - http://localhost/nginx-health
+        - curl
+        - -f
+        - http://localhost/
       interval: 15s
       timeout:  5s
       retries:  5
