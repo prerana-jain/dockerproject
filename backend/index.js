@@ -33,22 +33,41 @@ async function createPool() {
 }
 
 // ── Retry logic ─────────────────────────────────────────────────────────────
-const RETRY_INTERVAL_MS = 5000;
-const MAX_RETRIES        = 20;          // ~100 s total wait
+const BASE_DELAY_MS = 1000;   // 1 second
+const MAX_DELAY_MS  = 30000;  // 30 seconds cap
+let isRetrying = false; 
 
 async function connectWithRetry(attempt = 1) {
   try {
-    console.log(`[DB] Connection attempt ${attempt}/${MAX_RETRIES} …`);
+    console.log(`[DB] Connection attempt ${attempt} …`);
     await createPool();
     console.log('[DB] Connected successfully.');
+    isRetrying = false;  
   } catch (err) {
+    const delay = getBackoffDelay(attempt);
     console.error(`[DB] Attempt ${attempt} failed: ${err.message}`);
-    if (attempt >= MAX_RETRIES) {
-      console.error('[DB] Max retries reached. The app will keep running; /health will report DB down.');
-      return;
-    }
-    await new Promise(r => setTimeout(r, RETRY_INTERVAL_MS));
-    return connectWithRetry(attempt + 1);
+    console.log(`[DB] Retrying in ${delay / 1000}s … (backoff)`);
+ 
+    await new Promise(r => setTimeout(r, delay));
+    return connectWithRetry(attempt + 1);  
+  }
+}
+ 
+function getBackoffDelay(attempt) {
+  const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+  return Math.min(delay, MAX_DELAY_MS);
+}
+
+function handleDBError(err) {
+  console.error(`[DB] Error detected: ${err.message}`);
+  pool = null;
+ 
+  if (!isRetrying) {
+    isRetrying = true;
+    console.log('[DB] Starting reconnect with exponential backoff...');
+    connectWithRetry().catch(console.error);
+  } else {
+    console.log('[DB] Reconnect already in progress. Skipping duplicate.');
   }
 }
 
@@ -76,9 +95,10 @@ app.get('/health', async (_req, res) => {
     health.status             = 'degraded';
     health.database.status    = 'error';
     health.database.message   = err.message;
+    handleDBError(err);
 
     // Attempt to re-establish pool silently
-    if (!pool) connectWithRetry().catch(() => {});
+    // if (!pool) connectWithRetry().catch(() => {});
   }
 
   const httpStatus = health.status === 'ok' ? 200 : 503;
