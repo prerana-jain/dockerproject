@@ -14,6 +14,7 @@ const dbConfig = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME     || 'appdb',
   connectTimeout: 10000,
+  enableKeepAlive: true,
 };
 
 // ── Connection pool (created lazily after DB is ready) ──────────────────────
